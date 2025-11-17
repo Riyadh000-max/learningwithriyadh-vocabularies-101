@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocabulary Adventure</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Tone.js for sound effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    
+    <style>
+        /* Use a playful, rounded font like Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+        /* Custom styles for a "bouncy" button press */
+        .btn-press:active {
+            transform: scale(0.95);
+            transition: transform 0.1s;
+        }
+        /* Ensure the app takes up the whole screen */
+        .app-screen {
+            height: 100vh;
+            width: 100%;
+            overflow-y: auto;
+            /* Allow scrolling on content screens if needed */
+        }
+    </style>
+</head>
+<body class="bg-sky-100 text-gray-800">
+
+    <!-- Main Game Container -->
+    <div class="container mx-auto p-4 max-w-2xl">
+
+        <!-- Header with Total Score -->
+        <header class="bg-white rounded-xl shadow-lg p-4 mb-6 flex justify-between items-center">
+            <h1 class="text-2xl sm:text-3xl font-bold text-blue-600">Vocabulary Adventure</h1>
+            <div class="text-right">
+                <span class="block text-sm text-gray-500">Total Score</span>
+                <span id="total-score" class="text-3xl font-bold text-yellow-500">0</span>
+            </div>
+        </header>
+
+        <!-- 1. Letter Selection Screen -->
+        <main id="letter-select-screen" class="app-screen flex flex-col items-center justify-center p-4">
+            <h2 class="text-3xl font-bold text-center text-gray-700 mb-6">Choose a Letter!</h2>
+            <div id="letter-grid" class="grid grid-cols-4 sm:grid-cols-6 gap-3 sm:gap-4 w-full">
+                <!-- Letter buttons will be dynamically generated here -->
+            </div>
+        </main>
+
+        <!-- 2. Learning Screen -->
+        <main id="learning-screen" class="app-screen hidden flex-col items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-10 w-full text-center">
+                <!-- Progress Indicator -->
+                <div id="learning-progress" class="text-lg font-semibold text-gray-500 mb-4">Word 1 of 5</div>
+                
+                <!-- Emoji -->
+                <div id="learn-emoji" class="text-8xl sm:text-9xl mb-4">❓</div>
+                
+                <!-- English Word -->
+                <h2 id="learn-word" class="text-4xl sm:text-5xl font-bold text-blue-600 mb-2">Word</h2>
+                
+                <!-- Arabic Translation -->
+                <p id="learn-arabic" class="text-2xl sm:text-3xl text-teal-600 mb-8">المعنى</p>
+                
+                <!-- Pronounce Button -->
+                <button id="pronounce-btn" class="btn-press bg-green-500 text-white w-full py-4 rounded-lg text-xl font-bold shadow-md hover:bg-green-600 transition-all duration-200 flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .89-1.077 1.337-1.707.707L5.586 15z" />
+                    </svg>
+                    Pronounce
+                </button>
+            </div>
+            
+            <!-- Navigation Buttons -->
+            <button id="next-word-btn" class="btn-press bg-blue-500 text-white w-full py-4 rounded-lg text-xl font-bold shadow-md hover:bg-blue-600 transition-all duration-200 mt-6">
+                Next Word
+            </button>
+            <button id="start-quiz-btn" class="btn-press bg-pink-500 text-white w-full py-4 rounded-lg text-xl font-bold shadow-md hover:bg-pink-600 transition-all duration-200 mt-6 hidden">
+                Start Quiz!
+            </button>
+        </main>
+
+        <!-- 3. Quiz Screen -->
+        <main id="quiz-screen" class="app-screen hidden flex-col items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-xl p-6 sm:p-10 w-full text-center">
+                <!-- Quiz Progress -->
+                <div id="quiz-progress" class="text-lg font-semibold text-gray-500 mb-4">Question 1 of 5</div>
+                
+                <!-- Quiz Prompt (Emoji or Arabic) -->
+                <p class="text-xl text-gray-700 mb-2">Which word means...</p>
+                <div id="quiz-prompt" class="text-7xl sm:text-8xl mb-6">❓</div>
+                
+                <!-- Answer Options -->
+                <div id="quiz-options" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Quiz buttons will be dynamically generated here -->
+                </div>
+                
+                <!-- Feedback Message -->
+                <div id="quiz-feedback" class="mt-6 text-2xl font-bold h-8"></div>
+            </div>
+        </main>
+        
+        <!-- 4. Score Screen -->
+        <main id="score-screen" class="app-screen hidden flex-col items-center justify-center p-4 text-center">
+            <div class="bg-white rounded-2xl shadow-xl p-8 sm:p-12 w-full">
+                <h2 class="text-4xl font-bold text-gray-700 mb-4">Round Complete!</h2>
+                <div class="text-9xl mb-6">🎉</div>
+                <p class="text-2xl text-gray-600 mb-4">You Scored:</p>
+                <p id="final-round-score" class="text-6xl font-bold text-yellow-500 mb-10">0 / 5</p>
+                
+                <button id="main-menu-btn" class="btn-press bg-blue-500 text-white w-full py-4 rounded-lg text-xl font-bold shadow-md hover:bg-blue-600 transition-all duration-200">
+                    Back to Letters
+                </button>
+            </div>
+        </main>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- DATA ---
+            // Vocabulary list
+            const wordList = {
+                'A': [
+                    { word: 'Apple', emoji: '🍎', arabic: 'تفاحة' },
+                    { word: 'Ant', emoji: '🐜', arabic: 'نملة' },
+                    { word: 'Alligator', emoji: '🐊', arabic: 'تمساح' },
+                    { word: 'Astronaut', emoji: '🧑‍🚀', arabic: 'رائد فضاء' },
+                    { word: 'Anchor', emoji: '⚓', arabic: 'مرساة' }
+                ],
+                'B': [
+                    { word: 'Ball', emoji: '⚽', arabic: 'كرة' },
+                    { word: 'Bee', emoji: '🐝', arabic: 'نحلة' },
+                    { word: 'Book', emoji: '📚', arabic: 'كتاب' },
+                    { word: 'Banana', emoji: '🍌', arabic: 'موزة' },
+                    { word: 'Butterfly', emoji: '🦋', arabic: 'فراشة' }
+                ],
+                'C': [
+                    { word: 'Cat', emoji: '🐈', arabic: 'قطة' },
+                    { word: 'Car', emoji: '🚗', arabic: 'سيارة' },
+                    { word: 'Cookie', emoji: '🍪', arabic: 'كعكة' },
+                    { word: 'Clock', emoji: '⏰', arabic: 'ساعة' },
+                    { word: 'Crayon', emoji: '🖍️', arabic: 'قلم تلوين' }
+                ],
+                'D': [
+                    { word: 'Dog', emoji: '🐕', arabic: 'كلب' },
+                    { word: 'Duck', emoji: '🦆', arabic: 'بطة' },
+                    { word: 'Door', emoji: '🚪', arabic: 'باب' },
+                    { word: 'Desk', emoji: '💼', arabic: 'مكتب' },
+                    { word: 'Dolphin', emoji: '🐬', arabic: 'دولفين' }
+                ],
+                'E': [
+                    { word: 'Egg', emoji: '🥚', arabic: 'بيضة' },
+                    { word: 'Elephant', emoji: '🐘', arabic: 'فيل' },
+                    { word: 'Eye', emoji: '👁️', arabic: 'عين' },
+                    { word: 'Earth', emoji: '🌍', arabic: 'أرض' },
+                    { word: 'Eight', emoji: '8️⃣', arabic: 'ثمانية' }
+                ],
+                'F': [
+                    { word: 'Fish', emoji: '🐟', arabic: 'سمكة' },
+                    { word: 'Flower', emoji: '🌸', arabic: 'زهرة' },
+                    { word: 'Fire', emoji: '🔥', arabic: 'نار' },
+                    { word: 'Frog', emoji: '🐸', arabic: 'ضفدع' },
+                    { word: 'Foot', emoji: '🦶', arabic: 'قدم' }
+                ],
+                'G': [
+                    { word: 'Goat', emoji: '🐐', arabic: 'ماعز' },
+                    { word: 'Green', emoji: '🟢', arabic: 'أخضر' },
+                    { word: 'Glass', emoji: '🥛', arabic: 'كأس' },
+                    { word: 'Ghost', emoji: '👻', arabic: 'شبح' },
+                    { word: 'Gift', emoji: '🎁', arabic: 'هدية' }
+                ],
+                'H': [
+                    { word: 'Hand', emoji: '👋', arabic: 'يد' },
+                    { word: 'Hat', emoji: '🧢', arabic: 'قبعة' },
+                    { word: 'House', emoji: '🏠', arabic: 'منزل' },
+                    { word: 'Heart', emoji: '❤️', arabic: 'قلب' },
+                    { word: 'Horse', emoji: '🐎', arabic: 'حصان' }
+                ],
+                'I': [
+                    { word: 'Ice', emoji: '🧊', arabic: 'جليد' },
+                    { word: 'Igloo', emoji: '🛖', arabic: 'كوخ جليدي' },
+                    { word: 'Island', emoji: '🏝️', arabic: 'جزيرة' },
+                    { word: 'Idea', emoji: '💡', arabic: 'فكرة' },
+                    { word: 'Ice Cream', emoji: '🍦', arabic: 'آيس كريم' }
+                ],
+                'J': [
+                    { word: 'Jellyfish', emoji: '🌊', arabic: 'قنديل البحر' },
+                    { word: 'Juice', emoji: '🧃', arabic: 'عصير' },
+                    { word: 'Jacket', emoji: '🧥', arabic: 'سترة' },
+                    { word: 'Jump', emoji: '🤸', arabic: 'يقفز' },
+                    { word: 'Jet', emoji: '✈️', arabic: 'طائرة نفاثة' }
+                ],
+                'K': [
+                    { word: 'Key', emoji: '🔑', arabic: 'مفتاح' },
+                    { word: 'Kite', emoji: '🪁', arabic: 'طائرة ورقية' },
+                    { word: 'King', emoji: '👑', arabic: 'ملك' },
+                    { word: 'Koala', emoji: '🐨', arabic: 'كوالا' },
+                    { word: 'Kangaroo', emoji: '🦘', arabic: 'كنغر' }
+                ],
+                'L': [
+                    { word: 'Lion', emoji: '🦁', arabic: 'أسد' },
+                    { word: 'Leaf', emoji: '🍁', arabic: 'ورقة شجر' },
+                    { word: 'Lamp', emoji: '💡', arabic: 'مصباح' },
+                    { word: 'Lemon', emoji: '🍋', arabic: 'ليمون' },
+                    { word: 'Lock', emoji: '🔒', arabic: 'قفل' }
+                ],
+                'M': [
+                    { word: 'Moon', emoji: '🌙', arabic: 'قمر' },
+                    { word: 'Mouse', emoji: '🐭', arabic: 'فأر' },
+                    { word: 'Money', emoji: '💰', arabic: 'مال' },
+                    { word: 'Map', emoji: '🗺️', arabic: 'خريطة' },
+                    { word: 'Monkey', emoji: '🐒', arabic: 'قرد' }
+                ],
+                'N': [
+                    { word: 'Nose', emoji: '👃', arabic: 'أنف' },
+                    { word: 'Nest', emoji: '🪹', arabic: 'عش' },
+                    { word: 'Nine', emoji: '9️⃣', arabic: 'تسعة' },
+                    { word: 'Night', emoji: '🌃', arabic: 'ليل' },
+                    { word: 'Nurse', emoji: '👩‍⚕️', arabic: 'ممرضة' }
+                ],
+                'O': [
+                    { word: 'Orange', emoji: '🍊', arabic: 'برتقال' },
+                    { word: 'Octopus', emoji: '🐙', arabic: 'أخطبوط' },
+                    { word: 'Owl', emoji: '🦉', arabic: 'بومة' },
+                    { word: 'Open', emoji: '🚪', arabic: 'يفتح' },
+                    { word: 'One', emoji: '1️⃣', arabic: 'واحد' }
+                ],
+                'P': [
+                    { word: 'Pig', emoji: '🐷', arabic: 'خنزير' },
+                    { word: 'Pen', emoji: '🖊️', arabic: 'قلم' },
+                    { word: 'Pizza', emoji: '🍕', arabic: 'بيتزا' },
+                    { word: 'Panda', emoji: '🐼', arabic: 'باندا' },
+                    { word: 'Parrot', emoji: '🦜', arabic: 'ببغاء' }
+                ],
+                'Q': [
+                    { word: 'Queen', emoji: '👑', arabic: 'ملكة' },
+                    { word: 'Question', emoji: '❓', arabic: 'سؤال' },
+                    { word: 'Quilt', emoji: '🛏️', arabic: 'لحاف' },
+                    { word: 'Quiet', emoji: '🤫', arabic: 'هادئ' },
+                    { word: 'Quick', emoji: '⚡', arabic: 'سريع' }
+                ],
+                'R': [
+                    { word: 'Rabbit', emoji: '🐇', arabic: 'أرنب' },
+                    { word: 'Rain', emoji: '🌧️', arabic: 'مطر' },
+                    { word: 'Red', emoji: '🔴', arabic: 'أحمر' },
+                    { word: 'Ring', emoji: '💍', arabic: 'خاتم' },
+                    { word: 'Robot', emoji: '🤖', arabic: 'إنسان آلي' }
+                ],
+                'S': [
+                    { word: 'Sun', emoji: '☀️', arabic: 'شمس' },
+                    { word: 'Star', emoji: '⭐', arabic: 'نجمة' },
+                    { word: 'Snake', emoji: '🐍', arabic: 'ثعبان' },
+                    { word: 'Ship', emoji: '🚢', arabic: 'سفينة' },
+                    { word: 'Seven', emoji: '7️⃣', arabic: 'سبعة' }
+                ],
+                'T': [
+                    { word: 'Tree', emoji: '🌳', arabic: 'شجرة' },
+                    { word: 'Tiger', emoji: '🐅', arabic: 'نمر' },
+                    { word: 'Ten', emoji: '🔟', arabic: 'عشرة' },
+                    { word: 'Train', emoji: '🚂', arabic: 'قطار' },
+                    { word: 'Turtle', emoji: '🐢', arabic: 'سلحفاة' }
+                ],
+                'U': [
+                    { word: 'Umbrella', emoji: '☂️', arabic: 'مظلة' },
+                    { word: 'Up', emoji: '⬆️', arabic: 'فوق' },
+                    { word: 'Under', emoji: '🔽', arabic: 'تحت' },
+                    { word: 'Unicorn', emoji: '🦄', arabic: 'وحيد القرن' },
+                    { word: 'Uniform', emoji: '👕', arabic: 'زي موحد' }
+                ],
+                'V': [
+                    { word: 'Volcano', emoji: '🌋', arabic: 'بركان' },
+                    { word: 'Van', emoji: '🚐', arabic: 'شاحنة' },
+                    { word: 'Violin', emoji: '🎻', arabic: 'كمان' },
+                    { word: 'Vegetables', emoji: '🥦', arabic: 'خضروات' },
+                    { word: 'Vase', emoji: '🏺', arabic: 'مزهرية' }
+                ],
+                'W': [
+                    { word: 'Water', emoji: '💧', arabic: 'ماء' },
+                    { word: 'Whale', emoji: '🐋', arabic: 'حوت' },
+                    { word: 'Watch', emoji: '⌚', arabic: 'ساعة يد' },
+                    { word: 'Wolf', emoji: '🐺', arabic: 'ذئب' },
+                    { word: 'Window', emoji: '🪟', arabic: 'نافذة' }
+                ],
+                'X': [
+                    { word: 'X-ray', emoji: '🦴', arabic: 'أشعة سينية' },
+                    { word: 'Xylophone', emoji: '🎶', arabic: 'إكسيليفون' },
+                    { word: 'Box', emoji: '📦', arabic: 'صندوق' },
+                    { word: 'Fox', emoji: '🦊', arabic: 'ثعلب' },
+                    { word: 'Six', emoji: '6️⃣', arabic: 'ستة' }
+                ],
+                'Y': [
+                    { word: 'Yellow', emoji: '🟡', arabic: 'أصفر' },
+                    { word: 'Yo-yo', emoji: '🪀', arabic: 'يويو' },
+                    { word: 'Yacht', emoji: '⛵', arabic: 'يخت' },
+                    { word: 'Yawn', emoji: '🥱', arabic: 'يتثاءب' },
+                    { word: 'Yak', emoji: '🐂', arabic: 'ثور' }
+                ],
+                'Z': [
+                    { word: 'Zebra', emoji: '🦓', arabic: 'حمار وحشي' },
+                    { word: 'Zoo', emoji: '🦒', arabic: 'حديقة حيوان' },
+                    { word: 'Zero', emoji: '0️⃣', arabic: 'صفر' },
+                    { word: 'Zipper', emoji: '🤐', arabic: 'سحاب' },
+                    { word: 'Zigzag', emoji: '〰️', arabic: 'متعرج' }
+                ]
+            };
+            
+            const allWords = Object.values(wordList).flat();
+
+            // --- STATE ---
+            let currentWords = [];
+            let currentWordIndex = 0;
+            let currentQuizIndex = 0;
+            let totalScore = 0;
+            let roundScore = 0;
+            let audioInitialized = false;
+            let currentAudio = null; // To manage playing audio
+            
+            // --- SOUND EFFECTS (for UI clicks, correct, wrong) ---
+            const clickSynth = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination();
+            const correctSynth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.1 } }).toDestination();
+            const wrongSynth = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.3, sustain: 0, release: 0.1 } }).toDestination();
+            const winSynth = new Tone.MonoSynth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.05, decay: 0.5, sustain: 0.2, release: 0.5 } }).toDestination();
+
+            function playClickSound() { if (audioInitialized) clickSynth.triggerAttackRelease('C4', '8n'); }
+            function playCorrectSound() { if (audioInitialized) correctSynth.triggerAttackRelease('C5', '8n', Tone.now()); }
+            function playWrongSound() { if (audioInitialized) wrongSynth.triggerAttackRelease('C3', '8n', Tone.now()); }
+            function playWinSound() { if (audioInitialized) winSynth.triggerAttackRelease('G4', '4n', Tone.now()); }
+            
+            // Function to initialize audio context (must be user-triggered)
+            async function initializeAudio() {
+                if (!audioInitialized) {
+                    await Tone.start();
+                    audioInitialized = true;
+                    console.log('Audio Ready!');
+                }
+            }
+
+            // --- DOM ELEMENTS ---
+            const screens = {
+                select: document.getElementById('letter-select-screen'),
+                learn: document.getElementById('learning-screen'),
+                quiz: document.getElementById('quiz-screen'),
+                score: document.getElementById('score-screen')
+            };
+            const letterGrid = document.getElementById('letter-grid');
+            const totalScoreDisplay = document.getElementById('total-score');
+            
+            // Learning Screen Elements
+            const learningProgress = document.getElementById('learning-progress');
+            const learnEmoji = document.getElementById('learn-emoji');
+            const learnWord = document.getElementById('learn-word');
+            const learnArabic = document.getElementById('learn-arabic');
+            let pronounceBtn = document.getElementById('pronounce-btn'); // Use let
+            const nextWordBtn = document.getElementById('next-word-btn');
+            const startQuizBtn = document.getElementById('start-quiz-btn');
+
+            // Quiz Screen Elements
+            const quizProgress = document.getElementById('quiz-progress');
+            const quizPrompt = document.getElementById('quiz-prompt');
+            const quizOptions = document.getElementById('quiz-options');
+            const quizFeedback = document.getElementById('quiz-feedback');
+            
+            // Score Screen Elements
+            const finalRoundScore = document.getElementById('final-round-score');
+            const mainMenuBtn = document.getElementById('main-menu-btn');
+
+            // --- HELPER FUNCTIONS ---
+            
+            /** Shows a screen and hides all others */
+            function showScreen(screenId) {
+                Object.values(screens).forEach(screen => screen.classList.add('hidden'));
+                screens[screenId].classList.remove('hidden');
+                screens[screenId].classList.add('flex'); // Use flex for layout
+            }
+            
+            /** Shuffles an array in place (Fisher-Yates) */
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+            
+            /** Plays a high-quality, free TTS audio recording of the given text. */
+            function playWordAudio(text) {
+                if (currentAudio) {
+                    currentAudio.pause(); // Stop any currently playing word
+                }
+                
+                // Use the Google Translate TTS endpoint. It's free and high-quality.
+                const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(text)}&tl=en`;
+                
+                currentAudio = new Audio(audioUrl);
+                
+                currentAudio.play().catch(e => {
+                    console.error("Error playing audio:", e);
+                });
+            }
+
+
+            // --- GAME LOGIC ---
+
+            /** 1. Initialize Letter Grid */
+            function initLetterGrid() {
+                const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+                letterGrid.innerHTML = ''; // Clear existing
+                
+                for (const letter of letters) {
+                    const button = document.createElement('button');
+                    button.textContent = letter;
+                    button.className = "btn-press w-full h-16 sm:h-20 text-2xl sm:text-3xl font-bold rounded-lg shadow-md transition-all duration-200";
+                    
+                    if (wordList[letter]) {
+                        // Letter has words
+                        button.classList.add('bg-white', 'text-blue-500', 'hover:bg-blue-500', 'hover:text-white');
+                        button.addEventListener('click', () => startLearning(letter));
+                    } else {
+                        // Letter has no words, disable it
+                        button.classList.add('bg-gray-300', 'text-gray-500', 'opacity-70', 'cursor-not-allowed');
+                        button.disabled = true;
+                    }
+                    letterGrid.appendChild(button);
+                }
+            }
+
+            /** 2. Start Learning a Letter */
+            async function startLearning(letter) {
+                await initializeAudio(); // Ensure audio is ready
+                playClickSound();
+                
+                currentWords = [...wordList[letter]]; // Get a copy of the words
+                currentWordIndex = 0;
+                
+                displayCurrentWord();
+                showScreen('learn');
+                
+                nextWordBtn.classList.remove('hidden');
+                startQuizBtn.classList.add('hidden');
+            }
+            
+            /** 3. Display the current word */
+            function displayCurrentWord() {
+                const word = currentWords[currentWordIndex];
+                
+                learningProgress.textContent = `Word ${currentWordIndex + 1} of 5`;
+                learnEmoji.textContent = word.emoji;
+                learnWord.textContent = word.word;
+                learnArabic.textContent = word.arabic;
+                
+                // Clear old listener and add new one
+                const newPronounceBtn = pronounceBtn.cloneNode(true); // Clone to remove listeners
+                
+                newPronounceBtn.addEventListener('click', () => {
+                    playClickSound();
+                    playWordAudio(word.word); // Play the new, high-quality audio
+                });
+                
+                pronounceBtn.parentNode.replaceChild(newPronounceBtn, pronounceBtn);
+                pronounceBtn = newPronounceBtn; // Update reference
+            }
+
+            /** 4. Go to Next Word or Quiz */
+            function handleNextWord() {
+                playClickSound();
+                if (currentAudio) {
+                    currentAudio.pause(); // Stop audio when moving to next word
+                }
+                currentWordIndex++;
+                
+                if (currentWordIndex < currentWords.length) {
+                    displayCurrentWord();
+                } else {
+                    // Finished all words
+                    nextWordBtn.classList.add('hidden');
+                    startQuizBtn.classList.remove('hidden');
+                }
+                // <-- STRAY 'Look' WORD REMOVED FROM HERE
+            }
+
+            /** 5. Start the Quiz */
+            function startQuiz() {
+                playClickSound();
+                
+                // Shuffle words for the quiz
+                shuffleArray(currentWords);
+                currentQuizIndex = 0;
+                roundScore = 0;
+                
+                displayQuizQuestion();
+                showScreen('quiz');
+            }
+
+            /** 6. Display a Quiz Question */
+            function displayQuizQuestion() {
+                const correctWord = currentWords[currentQuizIndex];
+                
+                quizProgress.textContent = `Question ${currentQuizIndex + 1} of 5`;
+                quizFeedback.textContent = '';
+                quizOptions.innerHTML = '';
+                
+                // Randomly choose between emoji or Arabic as the prompt
+                if (Math.random() > 0.5) {
+                    quizPrompt.textContent = correctWord.emoji;
+                    quizPrompt.className = 'text-7xl sm:text-8xl mb-6'; // Emoji style
+                } else {
+                    quizPrompt.textContent = correctWord.arabic;
+                    quizPrompt.className = 'text-4xl sm:text-5xl font-bold text-teal-600 mb-6'; // Arabic style
+                }
+                
+                // Get 3 wrong options
+                const wrongOptions = allWords
+                    .filter(w => w.word !== correctWord.word) // Not the correct word
+                    .sort(() => 0.5 - Math.random()) // Shuffle all words
+                    .slice(0, 3); // Get first 3
+                    
+                const options = [correctWord, ...wrongOptions];
+                shuffleArray(options); // Shuffle correct answer in
+                
+                // Create buttons
+                options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option.word;
+                    button.className = "btn-press w-full p-4 text-xl font-semibold rounded-lg shadow-md transition-all duration-200 bg-white text-blue-500 border-2 border-blue-200 hover:bg-blue-100";
+                    button.addEventListener('click', () => checkAnswer(option.word, correctWord.word, button));
+                    quizOptions.appendChild(button);
+                });
+                 // <-- STRAY 'Additional' WORD REMOVED FROM HERE
+            }
+
+            /** 7. Check the Quiz Answer */
+            function checkAnswer(selectedWord, correctWord, button) {
+                // Disable all buttons
+                Array.from(quizOptions.children).forEach(btn => btn.disabled = true);
+                
+                if (selectedWord === correctWord) {
+                    // CORRECT
+                    playCorrectSound();
+                    roundScore++;
+                    totalScore++;
+                    totalScoreDisplay.textContent = totalScore;
+                    quizFeedback.textContent = 'Correct! 🎉';
+                    quizFeedback.className = 'mt-6 text-2xl font-bold h-8 text-green-500';
+                    button.classList.add('!bg-green-500', '!text-white');
+                } else {
+                    // WRONG
+                    playWrongSound();
+                    quizFeedback.textContent = `Oops! It's ${correctWord}`;
+                    quizFeedback.className = 'mt-6 text-2xl font-bold h-8 text-red-500';
+                    button.classList.add('!bg-red-500', '!text-white');
+                    // Highlight the correct one
+                    Array.from(quizOptions.children).forEach(btn => {
+                        if (btn.textContent === correctWord) {
+                            btn.classList.add('!bg-green-500', '!text-white');
+                        }
+                    });
+                }
+                
+                // Go to next question or score screen after a delay
+                setTimeout(() => {
+                    currentQuizIndex++;
+                    if (currentQuizIndex < currentWords.length) {
+                        displayQuizQuestion();
+                    } else {
+                        showScore();
+                    }
+                }, 1500); // 1.5 second delay
+            }
+            
+            /** 8. Show Final Score Screen */
+            function showScore() {
+                playWinSound();
+                finalRoundScore.textContent = `${roundScore} / 5`;
+                showScreen('score');
+            }
+            
+            /** 9. Return to Main Menu */
+            function returnToMenu() {
+                playClickSound();
+                showScreen('select');
+            }
+
+            // --- EVENT LISTENERS ---
+            nextWordBtn.addEventListener('click', handleNextWord);
+            startQuizBtn.addEventListener('click', startQuiz);
+            mainMenuBtn.addEventListener('click', returnToMenu);
+
+            // --- INITIALIZE ---
+            initLetterGrid();
+            showScreen('select');
+        });
+    </script>
+</body>
+</html>
