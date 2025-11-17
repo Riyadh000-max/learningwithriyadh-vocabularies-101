@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vocabulary Adventure</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load Tone.js for sound effects -->
@@ -12,20 +16,34 @@
     <style>
         /* Use a playful, rounded font like Inter */
         body {
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
+            font-family: 'Inter', "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Twemoji Mozilla", "Noto Color Emoji", sans-serif;
         }
         /* Custom styles for a "bouncy" button press */
         .btn-press:active {
             transform: scale(0.95);
             transition: transform 0.1s;
         }
-        /* Ensure the app takes up the whole screen */
+        /* Ensure the app takes up the whole screen and is centered */
         .app-screen {
-            height: 100vh;
+            min-height: 100vh;
             width: 100%;
-            overflow-y: auto;
-            /* Allow scrolling on content screens if needed */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* Reduce vertical padding on very short screens (landscape phones) */
+        @media (max-height: 500px) {
+            .app-screen {
+                padding-top: 1rem;
+                padding-bottom: 1rem;
+            }
+            .text-8xl {
+                font-size: 4rem; /* 64px */
+            }
+            .text-9xl {
+                font-size: 5rem; /* 80px */
+            }
         }
     </style>
 </head>
@@ -319,7 +337,7 @@
             let totalScore = 0;
             let roundScore = 0;
             let audioInitialized = false;
-            let currentAudio = null; // To manage playing audio
+            const wordAudio = new Audio(); // Create a single, reusable audio element
             
             // --- SOUND EFFECTS (for UI clicks, correct, wrong) ---
             const clickSynth = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination();
@@ -389,18 +407,26 @@
             
             /** Plays a high-quality, free TTS audio recording of the given text. */
             function playWordAudio(text) {
-                if (currentAudio) {
-                    currentAudio.pause(); // Stop any currently playing word
+                // Stop any currently playing word audio
+                if (!wordAudio.paused) {
+                    wordAudio.pause();
+                    wordAudio.currentTime = 0;
                 }
                 
                 // Use the Google Translate TTS endpoint. It's free and high-quality.
                 const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(text)}&tl=en`;
                 
-                currentAudio = new Audio(audioUrl);
+                wordAudio.src = audioUrl;
                 
-                currentAudio.play().catch(e => {
-                    console.error("Error playing audio:", e);
-                });
+                // Play the new audio
+                const playPromise = wordAudio.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(e => {
+                        console.error("Audio playback error:", e);
+                        // This can happen if the user hasn't interacted with the page yet.
+                        // The `initializeAudio` function helps mitigate this.
+                    });
+                }
             }
 
 
@@ -452,24 +478,14 @@
                 learnEmoji.textContent = word.emoji;
                 learnWord.textContent = word.word;
                 learnArabic.textContent = word.arabic;
-                
-                // Clear old listener and add new one
-                const newPronounceBtn = pronounceBtn.cloneNode(true); // Clone to remove listeners
-                
-                newPronounceBtn.addEventListener('click', () => {
-                    playClickSound();
-                    playWordAudio(word.word); // Play the new, high-quality audio
-                });
-                
-                pronounceBtn.parentNode.replaceChild(newPronounceBtn, pronounceBtn);
-                pronounceBtn = newPronounceBtn; // Update reference
             }
 
             /** 4. Go to Next Word or Quiz */
             function handleNextWord() {
                 playClickSound();
-                if (currentAudio) {
-                    currentAudio.pause(); // Stop audio when moving to next word
+                // Stop audio if it's playing when user moves to the next word
+                if (!wordAudio.paused) {
+                    wordAudio.pause();
                 }
                 currentWordIndex++;
                 
@@ -480,7 +496,6 @@
                     nextWordBtn.classList.add('hidden');
                     startQuizBtn.classList.remove('hidden');
                 }
-                // <-- STRAY 'Look' WORD REMOVED FROM HERE
             }
 
             /** 5. Start the Quiz */
@@ -530,7 +545,6 @@
                     button.addEventListener('click', () => checkAnswer(option.word, correctWord.word, button));
                     quizOptions.appendChild(button);
                 });
-                 // <-- STRAY 'Additional' WORD REMOVED FROM HERE
             }
 
             /** 7. Check the Quiz Answer */
@@ -586,6 +600,14 @@
             }
 
             // --- EVENT LISTENERS ---
+            pronounceBtn.addEventListener('click', () => {
+                playClickSound();
+                // Get the current word from the state and play its audio
+                const currentWord = currentWords[currentWordIndex];
+                if (currentWord) {
+                    playWordAudio(currentWord.word);
+                }
+            });
             nextWordBtn.addEventListener('click', handleNextWord);
             startQuizBtn.addEventListener('click', startQuiz);
             mainMenuBtn.addEventListener('click', returnToMenu);
